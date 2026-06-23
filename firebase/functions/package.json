@@ -1,0 +1,26 @@
+{
+  "name": "mvr-farms-functions",
+  "description": "MVR Farms Cloud Functions",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "seed:admin": "ts-node src/scripts/seedAdmin.ts"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.0",
+    "pdfkit": "^0.15.2"
+  },
+  "devDependencies": {
+    "@types/pdfkit": "^0.13.8",
+    "typescript": "^5.7.2",
+    "ts-node": "^10.9.2"
+  },
+  "private": true
+}

@@ -1,64 +1,74 @@
 {
   "expo": {
-    "name": "Farm Fresh Dairy",
-    "slug": "farm-fresh-dairy",
-    "version": "1.0.0",
+    "name": "MVR Farms",
+    "slug": "mvr-farms",
+    "version": "2.0.0",
     "orientation": "portrait",
+    "scheme": "mvrfarms",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2E7D32"
+      "backgroundColor": "#2D5016"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.farmfreshdairy.app",
+      "bundleIdentifier": "com.mvrfarms.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location for delivery tracking.",
-        "NSCameraUsageDescription": "We need camera access for delivery proof photos."
+        "NSLocationWhenInUseUsageDescription": "MVR Farms needs your location for delivery tracking and proof of delivery.",
+        "NSCameraUsageDescription": "MVR Farms needs camera access to capture delivery proof photos."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2E7D32"
+        "backgroundColor": "#2D5016"
       },
-      "package": "com.farmfreshdairy.app",
+      "package": "com.mvrfarms.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "CAMERA",
-        "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE"
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
+      "expo-router",
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Farm Fresh Dairy to use your location for delivery tracking."
+          "locationAlwaysAndWhenInUsePermission": "Allow MVR Farms to use your location for delivery tracking."
         }
       ],
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow Farm Fresh Dairy to take delivery proof photos."
+          "cameraPermission": "Allow MVR Farms to take delivery proof photos."
         }
       ],
       [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#2E7D32"
+          "color": "#2D5016"
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
   }
 }

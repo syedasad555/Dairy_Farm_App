@@ -1,40 +1,16 @@
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+/**
+ * @deprecated Legacy file — MVR Farms uses Firebase SDK, not Express REST API.
+ * Kept for backward compatibility with old screens under src/screens/.
+ */
+export {
+  getEmulatorHost,
+  getFirebaseEmulatorEndpoints,
+  FIREBASE_EMULATOR_PORTS,
+} from '../lib/firebase/emulatorHost';
 
-/** Strip Metro port from debugger host, e.g. "192.168.0.167:8082" → "192.168.0.167" */
-function parseHost(raw) {
-  if (!raw) return null;
-  const cleaned = raw.replace(/^exp:\/\//, '').replace(/^https?:\/\//, '');
-  const host = cleaned.split(':')[0];
-  return host || null;
-}
+import { getFirebaseEmulatorEndpoints } from '../lib/firebase/emulatorHost';
 
-function getDevHost() {
-  const raw =
-    Constants.expoGoConfig?.debuggerHost ||
-    Constants.expoConfig?.hostUri;
-
-  const host = parseHost(raw);
-  if (host && host !== 'localhost' && host !== '127.0.0.1') {
-    return host;
-  }
-
-  if (Platform.OS === 'android') {
-    return '10.0.2.2';
-  }
-
-  return '127.0.0.1';
-}
-
-export const getApiUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  return `http://${getDevHost()}:5000/api`;
-};
+/** Firebase Emulator UI URL (port 4000), NOT an Express /api backend */
+export const getApiUrl = () => getFirebaseEmulatorEndpoints().ui;
 
 export const API_BASE_URL = getApiUrl();
-
-if (__DEV__) {
-  console.log('[API] Using backend:', API_BASE_URL);
-}

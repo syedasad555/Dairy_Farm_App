@@ -1,0 +1,12 @@
+{
+  "name": "mvr-farms-firebase",
+  "private": true,
+  "scripts": {
+    "emulators": "node scripts/emulator-cli.js start",
+    "seed": "node scripts/seedEmulator.js",
+    "emulators:seed": "node scripts/emulator-cli.js seed",
+    "emulators:fresh": "npm run emulators:seed && npm run emulators",
+    "functions:build": "npm --prefix functions run build",
+    "deploy": "npx -y firebase-tools@latest deploy"
+  }
+}
