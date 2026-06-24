@@ -72,6 +72,14 @@ export class AuthRepository {
     await updateDocument(COLLECTIONS.USERS, uid, { status: 'rejected' });
   }
 
+  async getAllCustomers(): Promise<UserProfile[]> {
+    return queryDocuments<UserProfile>(
+      COLLECTIONS.USERS,
+      where('role', '==', 'customer'),
+      where('status', '==', 'approved')
+    );
+  }
+
   async createDeliveryPartnerUser(
     name: string,
     mobile: string,

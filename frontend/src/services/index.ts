@@ -194,25 +194,22 @@ export class OrderService {
 
 export class AdminService {
   async getDashboardStats(): Promise<AdminDashboardStats> {
-    const [orders, products, subscriptions, partners, complaints, feedback, pending] = await Promise.all([
+    const [orders, subscriptions, partners, complaints, feedback, pending, customers] = await Promise.all([
       orderRepository.getRecent(500),
-      productRepository.getAll(false),
       subscriptionRepository.getAll(true),
       deliveryPartnerRepository.getAll(),
       complaintRepository.getOpen(),
       feedbackRepository.getAll(),
       authRepository.getPendingCustomers(),
+      authRepository.getAllCustomers(),
     ]);
 
     const today = new Date().toISOString().split('T')[0];
     const thisMonth = new Date().getMonth();
     const thisYear = new Date().getFullYear();
 
-    const customers = await authRepository.getPendingCustomers();
-    const allUsers = customers; // simplified — Cloud Function aggregates full stats
-
     return {
-      totalCustomers: allUsers.length,
+      totalCustomers: customers.length,
       pendingApprovals: pending.length,
       totalOrders: orders.length,
       ordersToday: orders.filter((o) => o.createdAt.startsWith(today)).length,
@@ -244,6 +241,12 @@ export class AdminService {
 
   async rejectCustomer(uid: string): Promise<void> {
     await authRepository.rejectCustomer(uid);
+  }
+
+  async assignOrderPartner(orderId: string, partnerId: string): Promise<void> {
+    const partner = await deliveryPartnerRepository.getById(partnerId);
+    if (!partner) throw new Error('Delivery partner not found');
+    await orderRepository.assignPartner(orderId, partner.id, partner.name);
   }
 }
 
@@ -279,6 +282,14 @@ export class ProductService {
   update = productRepository.update.bind(productRepository);
   delete = productRepository.delete.bind(productRepository);
   disable = productRepository.disable.bind(productRepository);
+
+  async uploadImage(uri: string, productId: string): Promise<string> {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const storageRef = ref(storage, `products/${productId}_${Date.now()}.jpg`);
+    await uploadBytes(storageRef, blob);
+    return getDownloadURL(storageRef);
+  }
 }
 
 export class AddressService {

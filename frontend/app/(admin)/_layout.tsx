@@ -19,6 +19,7 @@ export default function AdminLayout() {
       <Stack.Screen name="subscriptions" />
       <Stack.Screen name="feedback" />
       <Stack.Screen name="complaints" />
+      <Stack.Screen name="analytics" />
     </Stack>
   );
 }

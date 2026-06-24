@@ -1,19 +1,28 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, Image, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
+import * as ImagePicker from 'expo-image-picker';
 import { productService } from '@/services';
 import { productRepository } from '@/repositories/product.repository';
-import { Card, Button, LoadingScreen, EmptyState, Badge } from '@/shared/components/ui';
+import { useThemeStore } from '@/stores';
+import { Card, Button, LoadingScreen, EmptyState, Badge, ScreenHeader } from '@/shared/components/ui';
 import { FormInput, FormSelect } from '@/shared/components/FormInput';
 import { formatCurrency } from '@/shared/utils/format';
 import { PRODUCT_CATEGORIES } from '@/shared/constants';
 import type { Product, ProductCategory } from '@/shared/types';
 
 export default function AdminProductsScreen() {
+  const dark = useThemeStore((s) => s.dark);
   const [showForm, setShowForm] = useState(false);
+
+  const bg = dark ? '#0F1A0A' : '#F5F9F2';
+  const cardBg = dark ? '#243018' : '#FFFFFF';
+  const border = dark ? '#2D3D22' : '#E8F0E2';
+  const text = dark ? '#E8F5E0' : '#1A2614';
+  const muted = dark ? '#8FA882' : '#5A6B52';
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ['admin-products'],
@@ -35,40 +44,48 @@ export default function AdminProductsScreen() {
   if (isLoading) return <LoadingScreen />;
 
   return (
-    <SafeAreaView className="flex-1 bg-surface">
-      <ScrollView className="p-4">
-        <TouchableOpacity onPress={() => router.back()} className="mb-4">
-          <Text className="text-primary font-semibold">← Back</Text>
-        </TouchableOpacity>
-
-        <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-2xl font-bold text-primary">Products</Text>
-          <TouchableOpacity onPress={() => setShowForm(!showForm)}>
-            <Text className="text-primary font-semibold">{showForm ? 'Cancel' : '+ Add'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {showForm && <ProductForm onSuccess={() => { setShowForm(false); refetch(); }} />}
+    <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
+      <ScreenHeader
+        title="Products"
+        subtitle={`${products?.length ?? 0} items`}
+        onBack={() => router.back()}
+        rightLabel={showForm ? 'Close' : '+ Add'}
+        rightAction={() => setShowForm(!showForm)}
+        gradient
+      />
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        {showForm && <ProductForm onSuccess={() => { setShowForm(false); refetch(); }} dark={dark} border={border} text={text} muted={muted} cardBg={cardBg} />}
 
         {!products?.length ? (
           <EmptyState title="No products" message="Add your first product." />
         ) : (
           products.map((p) => (
-            <Card key={p.id} className="mb-3">
-              <View className="flex-row justify-between">
-                <Text className="font-bold text-lg">{p.name}</Text>
-                <Badge label={p.active ? 'Active' : 'Disabled'} color={p.active ? 'success' : 'error'} />
+            <View key={p.id} style={[styles.card, { backgroundColor: cardBg, borderColor: border }]}>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {p.image ? (
+                  <Image source={{ uri: p.image }} style={styles.thumb} />
+                ) : (
+                  <View style={[styles.thumb, { backgroundColor: '#F0FBE8', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ fontSize: 24 }}>🥛</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontWeight: '800', color: text, fontSize: 15, flex: 1 }}>{p.name}</Text>
+                    <Badge label={p.active ? 'Active' : 'Disabled'} color={p.active ? 'success' : 'error'} />
+                  </View>
+                  <Badge label={p.category} color="primary" />
+                  <Text style={{ color: muted, fontSize: 12, marginTop: 4 }} numberOfLines={2}>{p.description}</Text>
+                  <Text style={{ color: '#1E5C0A', marginTop: 4, fontSize: 13 }}>
+                    {p.variants.map((v) => `${v.name}: ${formatCurrency(v.price)}`).join(' | ')}
+                  </Text>
+                </View>
               </View>
-              <Badge label={p.category} color="primary" />
-              <Text className="text-muted text-sm mt-1">{p.description}</Text>
-              <Text className="text-primary mt-1">
-                {p.variants.map((v) => `${v.name}: ${formatCurrency(v.price)}`).join(' | ')}
-              </Text>
-              <View className="flex-row gap-2 mt-3">
-                {p.active && <Button title="Disable" variant="outline" size="sm" className="flex-1" onPress={() => disable(p.id)} />}
-                <Button title="Delete" variant="danger" size="sm" className="flex-1" onPress={() => remove(p.id)} />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                {p.active && <Button title="Disable" variant="outline" size="sm" onPress={() => disable(p.id)} style={{ flex: 1 }} />}
+                <Button title="Delete" variant="danger" size="sm" onPress={() => remove(p.id)} style={{ flex: 1 }} />
               </View>
-            </Card>
+            </View>
           ))
         )}
       </ScrollView>
@@ -76,8 +93,10 @@ export default function AdminProductsScreen() {
   );
 }
 
-function ProductForm({ onSuccess }: { onSuccess: () => void }) {
-  const { control, handleSubmit, watch, setValue } = useForm({
+function ProductForm({ onSuccess, dark, border, text, muted, cardBg }: {
+  onSuccess: () => void; dark: boolean; border: string; text: string; muted: string; cardBg: string;
+}) {
+  const { control, handleSubmit } = useForm({
     defaultValues: {
       name: '',
       category: 'Dairy' as ProductCategory,
@@ -89,22 +108,61 @@ function ProductForm({ onSuccess }: { onSuccess: () => void }) {
       variantQty: '500ml',
     },
   });
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo library access to upload product images.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, allowsEditing: true });
+    if (!result.canceled && result.assets[0]) setImageUri(result.assets[0].uri);
+  };
 
   const onSubmit = async (data: Record<string, string>) => {
-    await productService.create({
-      name: data.name,
-      category: data.category as ProductCategory,
-      description: data.description,
-      image: data.image,
-      stock: parseInt(data.stock, 10),
-      active: true,
-      variants: [{ name: data.variantName, price: parseFloat(data.variantPrice), quantity: data.variantQty }],
-    });
-    onSuccess();
+    setUploading(true);
+    try {
+      const tempId = `prod_${Date.now()}`;
+      let imageUrl = data.image;
+      const images: string[] = [];
+
+      if (imageUri) {
+        imageUrl = await productService.uploadImage(imageUri, tempId);
+        images.push(imageUrl);
+      } else if (imageUrl) {
+        images.push(imageUrl);
+      }
+
+      await productService.create({
+        name: data.name,
+        category: data.category as ProductCategory,
+        description: data.description,
+        image: imageUrl,
+        images,
+        stock: parseInt(data.stock, 10),
+        active: true,
+        variants: [{ name: data.variantName, price: parseFloat(data.variantPrice), quantity: data.variantQty }],
+      });
+      onSuccess();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create product');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <Card className="mb-4">
+    <View style={[styles.card, { backgroundColor: cardBg, borderColor: border, marginBottom: 16 }]}>
+      <Text style={{ fontWeight: '800', color: text, marginBottom: 12 }}>➕ New Product</Text>
+      <TouchableOpacity onPress={pickImage} style={[styles.imagePicker, { borderColor: border }]}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={{ width: '100%', height: 120, borderRadius: 10 }} />
+        ) : (
+          <Text style={{ color: muted, textAlign: 'center' }}>📷 Tap to upload image</Text>
+        )}
+      </TouchableOpacity>
       <Controller control={control} name="name" render={({ field: { onChange, value } }) => (
         <FormInput label="Product Name" value={value} onChangeText={onChange} />
       )} />
@@ -115,7 +173,7 @@ function ProductForm({ onSuccess }: { onSuccess: () => void }) {
         <FormInput label="Description" value={value} onChangeText={onChange} multiline />
       )} />
       <Controller control={control} name="image" render={({ field: { onChange, value } }) => (
-        <FormInput label="Image URL" value={value} onChangeText={onChange} />
+        <FormInput label="Or paste Image URL" value={value} onChangeText={onChange} />
       )} />
       <Controller control={control} name="variantName" render={({ field: { onChange, value } }) => (
         <FormInput label="Variant Name" value={value} onChangeText={onChange} placeholder="500ml" />
@@ -123,7 +181,13 @@ function ProductForm({ onSuccess }: { onSuccess: () => void }) {
       <Controller control={control} name="variantPrice" render={({ field: { onChange, value } }) => (
         <FormInput label="Variant Price" value={value} onChangeText={onChange} keyboardType="numeric" />
       )} />
-      <Button title="Create Product" onPress={handleSubmit(onSubmit)} />
-    </Card>
+      <Button title={uploading ? 'Uploading...' : 'Create Product'} onPress={handleSubmit(onSubmit)} loading={uploading} gradient />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { borderRadius: 14, padding: 14, borderWidth: 1, marginBottom: 10 },
+  thumb: { width: 64, height: 64, borderRadius: 10 },
+  imagePicker: { borderWidth: 1.5, borderRadius: 12, borderStyle: 'dashed', padding: 16, marginBottom: 12, minHeight: 80, justifyContent: 'center' },
+});

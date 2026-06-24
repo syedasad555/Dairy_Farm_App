@@ -59,6 +59,14 @@ export class OrderRepository {
     await updateDocument(COLLECTIONS.ORDERS, id, { status, ...extra });
   }
 
+  async assignPartner(orderId: string, partnerId: string, partnerName: string): Promise<void> {
+    await updateDocument(COLLECTIONS.ORDERS, orderId, {
+      deliveryPartnerId: partnerId,
+      deliveryPartnerName: partnerName,
+      status: 'assigned',
+    });
+  }
+
   async update(id: string, data: Partial<Order>): Promise<void> {
     await updateDocument(COLLECTIONS.ORDERS, id, data as Record<string, unknown>);
   }

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { CartItem, UserProfile } from '@/shared/types';
 import { CACHE_KEYS } from '@/shared/constants';
 
+// ─── Cart Store ────────────────────────────────────────────────────────────
 interface CartState {
   items: CartItem[];
   addItem: (item: CartItem) => void;
@@ -63,6 +64,7 @@ export const useCartStore = create<CartState>()(
   )
 );
 
+// ─── Auth Store ────────────────────────────────────────────────────────────
 interface AuthState {
   profile: UserProfile | null;
   isLoading: boolean;
@@ -77,6 +79,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
 }));
 
+// ─── Offline Queue Store ───────────────────────────────────────────────────
 interface OfflineQueueItem {
   id: string;
   type: string;
@@ -116,3 +119,39 @@ export const useOfflineStore = create<OfflineState>()(
     }
   )
 );
+
+// ─── Theme Store (Dark Mode) ───────────────────────────────────────────────
+interface ThemeState {
+  dark: boolean;
+  toggleDark: () => void;
+  setDark: (dark: boolean) => void;
+}
+
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      dark: false,
+      toggleDark: () => set((s) => ({ dark: !s.dark })),
+      setDark: (dark) => set({ dark }),
+    }),
+    {
+      name: '@mvr/theme',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+// ─── Notification Badge Store ──────────────────────────────────────────────
+interface NotificationState {
+  unreadCount: number;
+  setUnreadCount: (count: number) => void;
+  increment: () => void;
+  reset: () => void;
+}
+
+export const useNotificationStore = create<NotificationState>((set) => ({
+  unreadCount: 0,
+  setUnreadCount: (count) => set({ unreadCount: count }),
+  increment: () => set((s) => ({ unreadCount: s.unreadCount + 1 })),
+  reset: () => set({ unreadCount: 0 }),
+}));

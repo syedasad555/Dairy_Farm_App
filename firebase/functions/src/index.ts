@@ -220,23 +220,25 @@ export const generateSubscriptionOrders = onSchedule('0 2 * * *', async () => {
 
 export const generateMonthlyBills = onSchedule('0 3 1 * *', async () => {
   const now = new Date();
-  const month = now.getMonth(); // previous month handled below
+  const month = now.getMonth();
   const year = now.getFullYear();
   const prevMonth = month === 0 ? 12 : month;
   const prevYear = month === 0 ? year - 1 : year;
 
-  const startDate = new Date(prevYear, prevMonth - 1, 1).toISOString();
-  const endDate = new Date(prevYear, prevMonth, 0, 23, 59, 59).toISOString();
+  const prevMonthStart = new Date(prevYear, prevMonth - 1, 1);
+  const prevMonthEnd = new Date(prevYear, prevMonth, 0, 23, 59, 59, 999);
 
   const ordersSnap = await db
     .collection(COLLECTIONS.ORDERS)
     .where('status', '==', 'delivered')
-    .where('createdAt', '>=', startDate)
-    .where('createdAt', '<=', endDate)
     .get();
 
-  const customerOrders: Record<string, typeof ordersSnap.docs> = {};
+  const customerOrders: Record<string, FirebaseFirestore.QueryDocumentSnapshot[]> = {};
   for (const doc of ordersSnap.docs) {
+    const order = mapOrderDoc(doc);
+    const created = new Date(getOrderCreatedIso(order));
+    if (created < prevMonthStart || created > prevMonthEnd) continue;
+
     const customerId = doc.data().customerId;
     if (!customerOrders[customerId]) customerOrders[customerId] = [];
     customerOrders[customerId].push(doc);
@@ -423,4 +425,105 @@ export const onComplaintCreated = onCall(async (request) => {
   );
 
   return { success: true };
+});
+
+// ─── Cancel Order (callable) ───────────────────────────────────────
+
+export const cancelOrder = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be logged in');
+
+  const { orderId } = request.data as { orderId: string };
+  const orderRef = db.collection(COLLECTIONS.ORDERS).doc(orderId);
+  const orderDoc = await orderRef.get();
+  if (!orderDoc.exists) throw new HttpsError('not-found', 'Order not found');
+
+  const order = orderDoc.data()!;
+  const caller = await db.collection(COLLECTIONS.USERS).doc(request.auth.uid).get();
+  const role = caller.data()?.role;
+
+  const isOwner = order.customerId === request.auth.uid;
+  const isAdminUser = role === 'admin';
+  if (!isOwner && !isAdminUser) throw new HttpsError('permission-denied', 'Not allowed');
+
+  if (!['pending', 'assigned'].includes(order.status)) {
+    throw new HttpsError('failed-precondition', 'Order cannot be cancelled at this stage');
+  }
+
+  await orderRef.update({
+    status: 'cancelled',
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await notifyUser(
+    order.customerId,
+    'Order Cancelled',
+    `Order ${order.orderNumber} has been cancelled.`,
+    'order_cancelled',
+    { orderId }
+  );
+
+  return { success: true };
+});
+
+// ─── Save FCM Token (callable) ───────────────────────────────────────
+
+export const saveFcmToken = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be logged in');
+
+  const { token } = request.data as { token: string };
+  if (!token) throw new HttpsError('invalid-argument', 'Token required');
+
+  await db.collection(COLLECTIONS.USERS).doc(request.auth.uid).update({
+    fcmToken: token,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true };
+});
+
+// ─── Reset Delivery Partner Password (admin) ─────────────────────────
+
+export const resetDeliveryPartnerPassword = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be logged in');
+
+  const caller = await db.collection(COLLECTIONS.USERS).doc(request.auth.uid).get();
+  if (caller.data()?.role !== 'admin') throw new HttpsError('permission-denied', 'Admin only');
+
+  const { userId, newPassword } = request.data as { userId: string; newPassword: string };
+  if (!newPassword || newPassword.length < 6) {
+    throw new HttpsError('invalid-argument', 'Password must be at least 6 characters');
+  }
+
+  await auth.updateUser(userId, { password: newPassword });
+  return { success: true };
+});
+
+// ─── Subscription Expiry Check (daily) ─────────────────────────────
+
+export const subscriptionExpiryCheck = onSchedule('0 5 * * *', async () => {
+  const today = new Date().toISOString().split('T')[0];
+
+  const subsSnap = await db
+    .collection(COLLECTIONS.SUBSCRIPTIONS)
+    .where('active', '==', true)
+    .where('endDate', '<', today)
+    .get();
+
+  for (const subDoc of subsSnap.docs) {
+    const sub = subDoc.data();
+    await subDoc.ref.update({
+      active: false,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await notifyUser(
+      sub.customerId,
+      'Subscription Expired',
+      `Your ${sub.productName} subscription has ended. Contact us to renew.`,
+      'subscription_expired',
+      { subscriptionId: subDoc.id }
+    );
+  }
+
+  console.log(`Deactivated ${subsSnap.size} expired subscriptions`);
 });

@@ -50,6 +50,7 @@ export interface Product {
   category: ProductCategory;
   description: string;
   image: string;
+  images: string[];       // multi-image gallery
   variants: ProductVariant[];
   stock: number;
   active: boolean;
@@ -174,6 +175,7 @@ export interface Complaint {
   preferredTime: string;
   requestCallback: boolean;
   status: ComplaintStatus;
+  photoUrl?: string;
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;
@@ -217,6 +219,7 @@ export interface AnalyticsSnapshot {
   eggPacksSold: number;
   customerGrowth: number;
   deliveryPerformance: number;
+  createdAt?: string;
 }
 
 export interface AppSettings {

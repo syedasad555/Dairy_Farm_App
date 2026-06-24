@@ -89,9 +89,10 @@ async function main() {
     await ensureEmulatorJars();
     switch (cmd) {
       case 'start':
-    runFirebase(
-      'emulators:start --host 0.0.0.0 --import=./emulator-data --export-on-exit=./emulator-data'
-    );
+        // Host binding is configured per-emulator in firebase.json (0.0.0.0 for LAN/phone access).
+        runFirebase(
+          'emulators:start --import=./emulator-data --export-on-exit=./emulator-data'
+        );
         break;
       case 'seed':
         runFirebase(

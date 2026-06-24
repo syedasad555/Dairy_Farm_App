@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "emulators": "node scripts/emulator-cli.js start",
+    "emulators:start": "node scripts/emulator-cli.js start",
     "seed": "node scripts/seedEmulator.js",
     "emulators:seed": "node scripts/emulator-cli.js seed",
     "emulators:fresh": "npm run emulators:seed && npm run emulators",
