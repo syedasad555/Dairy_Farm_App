@@ -83,16 +83,32 @@ function runFirebase(command) {
   });
 }
 
+function getStartCommand() {
+  const accountsPath = path.join(root, 'emulator-data', 'auth_export', 'accounts.json');
+  let hasSavedUsers = false;
+  try {
+    const accounts = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
+    hasSavedUsers = Array.isArray(accounts.users) && accounts.users.length > 0;
+  } catch {
+    hasSavedUsers = false;
+  }
+
+  if (hasSavedUsers) {
+    return 'emulators:start --import=./emulator-data --export-on-exit=./emulator-data';
+  }
+
+  console.log('No saved emulator users found — starting fresh.');
+  console.log('After emulators start, run: npm run seed');
+  return 'emulators:start --export-on-exit=./emulator-data';
+}
+
 async function main() {
   const cmd = process.argv[2];
   try {
     await ensureEmulatorJars();
     switch (cmd) {
       case 'start':
-        // Host binding is configured per-emulator in firebase.json (0.0.0.0 for LAN/phone access).
-        runFirebase(
-          'emulators:start --import=./emulator-data --export-on-exit=./emulator-data'
-        );
+        runFirebase(getStartCommand());
         break;
       case 'seed':
         runFirebase(

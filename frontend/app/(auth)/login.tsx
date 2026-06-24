@@ -28,10 +28,22 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(schema),
     defaultValues: { mobile: '', password: '' },
   });
+
+  const fillTestAccount = (role: 'admin' | 'customer' | 'partner') => {
+    const accounts = {
+      admin: { mobile: '9999999999', password: 'admin123' },
+      customer: { mobile: '9876543210', password: 'customer123' },
+      partner: { mobile: '9888888888', password: 'partner123' },
+    };
+    const account = accounts[role];
+    setValue('mobile', account.mobile);
+    setValue('password', account.password);
+    setError('');
+  };
 
   const onSubmit = async (data: LoginForm) => {
     setError('');
@@ -97,6 +109,27 @@ export default function LoginScreen() {
             />
 
             {error ? <Text className="text-error text-sm mb-4">{error}</Text> : null}
+
+            {__DEV__ && useEmulator && (
+              <View className="mb-4 p-3 rounded-xl bg-primary-50 border border-primary-100">
+                <Text className="text-xs text-muted mb-2">Test accounts (run: cd firebase && npm run seed)</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {[
+                    { role: 'admin' as const, label: 'Admin' },
+                    { role: 'customer' as const, label: 'Customer' },
+                    { role: 'partner' as const, label: 'Partner' },
+                  ].map((item) => (
+                    <TouchableOpacity
+                      key={item.role}
+                      onPress={() => fillTestAccount(item.role)}
+                      className="px-3 py-2 rounded-lg bg-white border border-primary-200"
+                    >
+                      <Text className="text-primary text-xs font-semibold">{item.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
 
             <Button title={t('login')} onPress={handleSubmit(onSubmit)} loading={loading} />
           </Card>

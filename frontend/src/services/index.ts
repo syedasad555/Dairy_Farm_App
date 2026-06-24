@@ -39,9 +39,26 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<UserProfile> {
-    const user = await authRepository.login(input.mobile, input.password);
+    let user;
+    try {
+      user = await authRepository.login(input.mobile, input.password);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code;
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        throw new Error(
+          'Invalid mobile or password. For local testing, run: cd firebase && npm run seed (with emulators running). Admin: 9999999999 / admin123'
+        );
+      }
+      if (code === 'auth/network-request-failed') {
+        throw new Error('Cannot reach Firebase. Start emulators (npm run emulators in firebase/) or check your network.');
+      }
+      throw err instanceof Error ? err : new Error('Login failed');
+    }
+
     const profile = await authRepository.getProfile(user.uid);
-    if (!profile) throw new Error('Profile not found');
+    if (!profile) {
+      throw new Error('Profile not found. Run: cd firebase && npm run seed');
+    }
 
     if (profile.role === 'customer' && profile.status === 'rejected') {
       await authRepository.logout();

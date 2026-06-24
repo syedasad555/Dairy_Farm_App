@@ -39,6 +39,7 @@ async function upsertUser(mobile, password, profile) {
 
   try {
     user = await auth.getUserByEmail(email);
+    await auth.updateUser(user.uid, { password, displayName: profile.name });
   } catch {
     user = await auth.createUser({ email, password, displayName: profile.name });
   }
@@ -119,6 +120,7 @@ async function seed() {
       category: 'Dairy',
       description: 'Fresh farm cow milk',
       image: '',
+      images: [],
       variants: [
         { name: '500ml', price: 30, quantity: '500ml' },
         { name: '1L', price: 55, quantity: '1L' },
@@ -132,6 +134,7 @@ async function seed() {
       category: 'Dairy',
       description: 'Traditional churned ghee',
       image: '',
+      images: [],
       variants: [{ name: '500g', price: 450, quantity: '500g' }],
       stock: 50,
       active: true,
@@ -142,6 +145,7 @@ async function seed() {
       category: 'Poultry',
       description: 'Free-range egg pack',
       image: '',
+      images: [],
       variants: [{ name: '6 Pack', price: 60, quantity: '6' }],
       stock: 80,
       active: true,
